@@ -23,29 +23,46 @@ ESTADOS_TODOS = [
 class TSE_download():
     
     url = 'http://agencia.tse.jus.br/estatistica/sead/odsele/'
-    folder_save = None
+    folder_save = os.path.expanduser('~/localdatalake/tse_raw/originals')
     
     @classmethod
     def download(cls, path='', **kwargs):
-        this_url = os.path.join(cls.url, path)
-        req = requests.get(this_url)
-        try:
-            zipped = zipfile.ZipFile(io.BytesIO(req.content))
-            logging.info(f'Done')
-        except zipfile.BadZipFile:
-            logging.error(f'Not a valid file')
-            return None
-        if kwargs.get('save_local', False):
+
+        ## First, check the already downloaded files
+        save_name = os.path.join(cls.folder_save, path)
+        if os.path.exists(save_name):
+            with open(save_name, 'rb') as flread:
+                content = io.BytesIO(flread.read())
+        else:
+            this_url = os.path.join(cls.url, path)
+            req = requests.get(this_url)
+            try:
+                content = io.BytesIO(req.content)
+                logging.info(f'Done')
+            except zipfile.BadZipFile:
+                logging.error(f'Not a valid file')
+                return None
+
+        if kwargs.get('save', False):
+            save_name = os.path.join(cls.folder_save, path)
+            folder = os.path.dirname(save_name)
+            if not os.path.isdir(folder):
+                os.makedirs(folder)
+            with open(save_name, 'wb') as flsave:
+                flsave.write(content.read())
+        elif kwargs.get('save_unzipped', False):
+            zipped = zipfile.ZipFile(content)
             for name in zipped.namelist():
-                folder = cls.folder_save
+                save_name = os.path.join(cls.folder_save, 'unzipped', name)
+                folder = os.path.dirname(save_name)
                 if not os.path.isdir(folder):
                     os.makedirs(folder)
-                save_name = os.path.join(folder, name)
                 with open(save_name, 'wb') as flsave:
                     with zipped.open(name) as flread:
                         flsave.write(flread.read())
         else:
             files = {}
+            zipped = zipfile.ZipFile(content)
             for name in zipped.namelist():
                 with zipped.open(name) as flread:
                     files[name] = flread.read()
@@ -889,7 +906,7 @@ class TSE_parse_votacao_detalhe(TSE_parse):
         return df
 
 
-def download_demografia_zona(anos=None, estados=None, force=False):
+def download_demografia_zona(anos=None, estados=None, force=False, save=False):
     clsA = TSE_download_demografia_zona()
     clsB = TSE_parse_demografia()
     folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
@@ -1098,6 +1115,7 @@ if __name__ == '__main__':
     arguments.add_argument('--qual')
     arguments.add_argument('--anos', default=None)
     arguments.add_argument('--force', action='store_true')
+    arguments.add_argument('--download', action='store_true')
     parsed = arguments.parse_args()
 
     def parse_int(x):
@@ -1111,6 +1129,7 @@ if __name__ == '__main__':
     else:
         anos = None
     force = parsed.force
+    save = parsed.download
 
     if parsed.qual in ['candidatos', 'tudo']:
         download_candidatos(anos=anos, force=force)
