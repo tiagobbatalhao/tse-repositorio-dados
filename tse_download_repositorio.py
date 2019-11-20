@@ -29,8 +29,9 @@ class TSE_download():
     def download(cls, path='', **kwargs):
 
         ## First, check the already downloaded files
-        save_name = os.path.join(cls.folder_save, path)
+        save_name = os.path.join(cls.folder_save, 'zipped', path)
         if os.path.exists(save_name):
+            print('Reading local file: {}'.format(save_name))
             with open(save_name, 'rb') as flread:
                 content = io.BytesIO(flread.read())
         else:
@@ -44,7 +45,7 @@ class TSE_download():
                 return None
 
         if kwargs.get('save', False):
-            save_name = os.path.join(cls.folder_save, path)
+            save_name = os.path.join(cls.folder_save, 'zipped', path)
             folder = os.path.dirname(save_name)
             if not os.path.isdir(folder):
                 os.makedirs(folder)
@@ -53,20 +54,22 @@ class TSE_download():
         elif kwargs.get('save_unzipped', False):
             zipped = zipfile.ZipFile(content)
             for name in zipped.namelist():
-                save_name = os.path.join(cls.folder_save, 'unzipped', name)
+                save_name = os.path.join(cls.folder_save, 'unzipped', path.split('.')[0], name)
                 folder = os.path.dirname(save_name)
                 if not os.path.isdir(folder):
                     os.makedirs(folder)
                 with open(save_name, 'wb') as flsave:
                     with zipped.open(name) as flread:
                         flsave.write(flread.read())
-        else:
+        elif kwargs.get('return_unzipped'):
             files = {}
             zipped = zipfile.ZipFile(content)
             for name in zipped.namelist():
                 with zipped.open(name) as flread:
                     files[name] = flread.read()
             return files
+        else:
+            return zipfile.ZipFile(content)
 
     @classmethod
     def read_files(cls, file_dict, header=0):
@@ -904,6 +907,100 @@ class TSE_parse_votacao_detalhe(TSE_parse):
                 df.loc[df[col]<0, col] = None
     
         return df
+
+
+class Main:
+
+    anos = list(range(2018, 1998, -2))
+    estados = ESTADOS_TODOS
+
+    @classmethod
+    def main_loop(cls, anos=None, estados=None, **kwargs):
+        for ano in (anos or cls.anos):
+            for estado in (estados or cls.estados):
+                cls.main(ano=ano, estado=estado, **kwargs)
+
+    @classmethod
+    def main(cls, ano=None, estado=None, **kwargs):
+        save_name = cls.save_name.format(ano=ano, estado=estado)
+        save_full = os.path.join(cls.folder, save_name)
+        if kwargs.get('force') or not (os.path.exists(save_full) or os.path.exists(save_full+'.gz')):
+            print('[{}] Downloading {}'.format(get_time_now(), save_name))
+            if kwargs.get('save_raw'):
+                cls.class_downloader.download(ano=ano, estado=estado, save=True)
+            download = cls.class_downloader.download(ano=ano, estado=estado)
+            print('[{}] Downloaded.'.format(get_time_now()))
+            try:
+                files = {}
+                for name in download.namelist():
+                    if (name.endswith('txt') or name.endswith('csv')) and ('brasil' not in name.lower()):
+                        with download.open(name) as flread:
+                            files[name] = cls.class_parser.parse(
+                                flread.read(),
+                                ano=ano,
+                                **cls.parser_kwargs,
+                            )
+                print('[{}] Parsed.'.format(get_time_now()))
+            # except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+            except (MemoryError, pandas.errors.EmptyDataError):
+                print('[{}] PROBLEM: {}'.format(get_time_now(), save_name))
+                files = {}
+            for name, df in files.items():
+                basename = os.path.basename(name)
+                groups = cls.regular_expression.match(basename).groups()
+                save_name = cls.save_name.format(ano=groups[0], estado=groups[1])
+                save_full = os.path.join(cls.folder, save_name)
+                if kwargs.get('force') or not (os.path.exists(save_full) or os.path.exists(save_full+'.gz')):
+                    df.to_csv(save_full, index=False, header=True, sep=';', float_format='%.0f')
+                    print('[{}] Saved {}'.format(get_time_now(), save_name))
+        else:
+            print('[{}] Found: {}'.format(get_time_now(), save_name))
+            pass
+
+
+class Main_demografia_zona(Main):
+
+    anos = ['ATUAL'] + Main.anos
+    estados = [None]
+    folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
+    save_name = 'PerfilZona_{ano}.csv'
+    class_downloader = TSE_download_demografia_zona
+    class_parser = TSE_parse_demografia
+    regular_expression = re.compile("perfil_eleitorado_([A-Za-z0-9]{4,}).([a-z]{3})")
+    parser_kwargs = dict(nivel='zona')
+
+class Main_demografia_secao(Main):
+
+    anos = ['ATUAL'] + Main.anos
+    estados = Main.estados
+    folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
+    save_name = 'PerfilSecao_{ano}.csv'
+    class_downloader = TSE_download_demografia_secao
+    class_parser = TSE_parse_demografia
+    regular_expression = re.compile("perfil_eleitor_secao_([0-9A-Za-z]{4,})_([A-Z]{2}).([a-z]{3})")
+    parser_kwargs = dict(nivel='secao')
+
+class Main_candidatos(Main):
+
+    anos = Main.anos
+    estados = [None]
+    folder = os.path.expanduser('~/localdatalake/tse_refined/candidatos')
+    save_name = 'Candidatos_{ano}_{estado}.csv'
+    class_downloader = TSE_download_candidatos
+    class_parser = TSE_parse_candidatos
+    regular_expression = re.compile("consulta_cand_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+    parser_kwargs = dict()
+
+class Main_votacao_zona(Main):
+
+    anos = Main.anos
+    estados = [None]
+    folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
+    save_name = 'VotoZona_{ano}_{estado}.csv'
+    class_downloader = TSE_download_votacao_candidato_zona
+    class_parser = TSE_parse_votacao_candidato_zona
+    regular_expression = re.compile("votacao_candidato_munzona_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+    parser_kwargs = dict()
 
 
 def download_demografia_zona(anos=None, estados=None, force=False, save=False):
