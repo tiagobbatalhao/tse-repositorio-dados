@@ -69,7 +69,10 @@ class TSE_download():
                     files[name] = flread.read()
             return files
         else:
-            return zipfile.ZipFile(content)
+            try:
+                return zipfile.ZipFile(content)
+            except zipfile.BadZipFile:
+                return None
 
     @classmethod
     def read_files(cls, file_dict, header=0):
@@ -131,7 +134,25 @@ class TSE_download_votacao_detalhesecao(TSE_download):
     def download(cls, ano, **kwargs):
         path = f'detalhe_votacao_secao/detalhe_votacao_secao_{ano}.zip'
         return super().download(path, **kwargs)
+
+class TSE_download_bens_candidatos(TSE_download):
+    @classmethod
+    def download(cls, ano, **kwargs):
+        path = f'bem_candidato/bem_candidato_{ano}.zip'
+        return super().download(path, **kwargs)
     
+class TSE_download_coligacoes(TSE_download):
+    @classmethod
+    def download(cls, ano, **kwargs):
+        path = f'consulta_coligacao/consulta_coligacao_{ano}.zip'
+        return super().download(path, **kwargs)
+
+class TSE_download_vagas(TSE_download):
+    @classmethod
+    def download(cls, ano, **kwargs):
+        path = f'consulta_vagas/consulta_vagas_{ano}.zip'
+        return super().download(path, **kwargs)
+
 class TSE_parse:
 
     @classmethod
@@ -427,8 +448,6 @@ class TSE_parse_demografia(TSE_parse):
         return df
     
 
-    
-
 class TSE_parse_candidatos(TSE_parse):
 
     tabelas_dicionario = {
@@ -650,15 +669,16 @@ class TSE_parse_candidatos(TSE_parse):
                 if col in df.columns:
                     df[col] = df[col].astype('category')
     
-        numeric_integer = ['Ano', 'Turno', 'Cargo', 'Urna_número', 'Partido_número', 'Idade', 'Nascimento_município']
-        numeric_float = ['Despesa']
-        for col in numeric_integer:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
-        for col in numeric_float:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
-                df.loc[df[col]<0, col] = None
+        if kwargs.get('to_numeric'):
+            numeric_integer = ['Ano', 'Turno', 'Cargo', 'Urna_número', 'Partido_número', 'Idade', 'Nascimento_município']
+            numeric_float = ['Despesa']
+            for col in numeric_integer:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
+            for col in numeric_float:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
+                    df.loc[df[col]<0, col] = None
     
         return df
 
@@ -731,15 +751,16 @@ class TSE_parse_votacao_candidato(TSE_parse):
                 if col in df.columns:
                     df[col] = df[col].astype('category')
     
-        numeric_integer = ['Ano', 'Turno', 'Cargo', 'Município', 'Zona', 'Seção', 'Votos', 'Urna_número']
-        numeric_float = []
-        for col in numeric_integer:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
-        for col in numeric_float:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
-                df.loc[df[col]<0, col] = None
+        if kwargs.get('to_numeric'):
+            numeric_integer = ['Ano', 'Turno', 'Cargo', 'Município', 'Zona', 'Seção', 'Votos', 'Urna_número']
+            numeric_float = []
+            for col in numeric_integer:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
+            for col in numeric_float:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
+                    df.loc[df[col]<0, col] = None
     
         return df
 
@@ -805,15 +826,16 @@ class TSE_parse_votacao_candidato_zona(TSE_parse):
                 if col in df.columns:
                     df[col] = df[col].astype('category')
     
-        numeric_integer = ['Ano', 'Turno', 'Cargo', 'Município', 'Zona', 'Seção', 'Votos', 'Urna_número']
-        numeric_float = []
-        for col in numeric_integer:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
-        for col in numeric_float:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
-                df.loc[df[col]<0, col] = None
+        if kwargs.get('to_numeric'):
+            numeric_integer = ['Ano', 'Turno', 'Cargo', 'Município', 'Zona', 'Seção', 'Votos', 'Urna_número']
+            numeric_float = []
+            for col in numeric_integer:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
+            for col in numeric_float:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
+                    df.loc[df[col]<0, col] = None
     
         return df
 
@@ -896,15 +918,16 @@ class TSE_parse_votacao_detalhe(TSE_parse):
                 if col in df.columns:
                     df[col] = df[col].astype('category')
     
-        numeric_integer = ['Ano', 'Turno', 'Cargo', 'Município', 'Zona', 'Seção', ] + [x for x in df.columns if x.startswith('Votos')]
-        numeric_float = []
-        for col in numeric_integer:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
-        for col in numeric_float:
-            if col in df.columns:
-                df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
-                df.loc[df[col]<0, col] = None
+        if kwargs.get('to_numeric'):
+            numeric_integer = ['Ano', 'Turno', 'Cargo', 'Município', 'Zona', 'Seção', ] + [x for x in df.columns if x.startswith('Votos')]
+            numeric_float = []
+            for col in numeric_integer:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_integer(x)).astype(int)
+            for col in numeric_float:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: cls.parse_float(x)).astype(float)
+                    df.loc[df[col]<0, col] = None
     
         return df
 
@@ -926,33 +949,35 @@ class Main:
         save_full = os.path.join(cls.folder, save_name)
         if kwargs.get('force') or not (os.path.exists(save_full) or os.path.exists(save_full+'.gz')):
             print('[{}] Downloading {}'.format(get_time_now(), save_name))
-            if kwargs.get('save_raw'):
-                cls.class_downloader.download(ano=ano, estado=estado, save=True)
-            download = cls.class_downloader.download(ano=ano, estado=estado)
-            print('[{}] Downloaded.'.format(get_time_now()))
-            try:
-                files = {}
+            download = cls.class_downloader.download(ano=ano, estado=estado, save=kwargs.get('save_raw'))
+            print('[{}] Downloaded'.format(get_time_now()))
+            if download:
                 for name in download.namelist():
                     if (name.endswith('txt') or name.endswith('csv')) and ('brasil' not in name.lower()):
-                        with download.open(name) as flread:
-                            files[name] = cls.class_parser.parse(
-                                flread.read(),
-                                ano=ano,
-                                **cls.parser_kwargs,
-                            )
-                print('[{}] Parsed.'.format(get_time_now()))
-            # except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-            except (MemoryError, pandas.errors.EmptyDataError):
-                print('[{}] PROBLEM: {}'.format(get_time_now(), save_name))
-                files = {}
-            for name, df in files.items():
-                basename = os.path.basename(name)
-                groups = cls.regular_expression.match(basename).groups()
-                save_name = cls.save_name.format(ano=groups[0], estado=groups[1])
-                save_full = os.path.join(cls.folder, save_name)
-                if kwargs.get('force') or not (os.path.exists(save_full) or os.path.exists(save_full+'.gz')):
-                    df.to_csv(save_full, index=False, header=True, sep=';', float_format='%.0f')
-                    print('[{}] Saved {}'.format(get_time_now(), save_name))
+                        try:
+                            basename = os.path.basename(name)
+                            match = cls.regular_expression.match(basename)
+                            if match:
+                                groups = match.groups()
+                            else:
+                                print('[{}] NOT MATCHED: {}'.format(get_time_now(), basename))
+                                continue
+                            save_name = cls.save_name.format(ano=groups[0], estado=groups[1])
+                            save_full = os.path.join(cls.folder, save_name)
+                            if kwargs.get('force') or not (os.path.exists(save_full) or os.path.exists(save_full+'.gz')):
+                                print('[{}] Parsing {}'.format(get_time_now(), save_name))
+                                with download.open(name) as flread:
+                                    df = cls.class_parser.parse(
+                                        flread.read(),
+                                        ano=ano,
+                                        **cls.parser_kwargs,
+                                    )
+                                print('[{}] Parsed {}'.format(get_time_now(), save_name))
+                                df.to_csv(save_full, index=False, header=True, sep=';', float_format='%.0f')
+                                print('[{}] Saved {}'.format(get_time_now(), save_name))
+                        except (MemoryError, pandas.errors.EmptyDataError):
+                            print('[{}] PROBLEM: {}'.format(get_time_now(), save_name))
+                            files = {}
         else:
             print('[{}] Found: {}'.format(get_time_now(), save_name))
             pass
@@ -974,7 +999,7 @@ class Main_demografia_secao(Main):
     anos = ['ATUAL'] + Main.anos
     estados = Main.estados
     folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
-    save_name = 'PerfilSecao_{ano}.csv'
+    save_name = 'PerfilSecao_{ano}_{estado}.csv'
     class_downloader = TSE_download_demografia_secao
     class_parser = TSE_parse_demografia
     regular_expression = re.compile("perfil_eleitor_secao_([0-9A-Za-z]{4,})_([A-Z]{2}).([a-z]{3})")
@@ -989,9 +1014,9 @@ class Main_candidatos(Main):
     class_downloader = TSE_download_candidatos
     class_parser = TSE_parse_candidatos
     regular_expression = re.compile("consulta_cand_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
-    parser_kwargs = dict()
+    parser_kwargs = dict(to_numeric=True)
 
-class Main_votacao_zona(Main):
+class Main_votacao_candidato_zona(Main):
 
     anos = Main.anos
     estados = [None]
@@ -1002,206 +1027,227 @@ class Main_votacao_zona(Main):
     regular_expression = re.compile("votacao_candidato_munzona_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
     parser_kwargs = dict()
 
+class Main_votacao_secao(Main):
 
-def download_demografia_zona(anos=None, estados=None, force=False, save=False):
-    clsA = TSE_download_demografia_zona()
-    clsB = TSE_parse_demografia()
-    folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
-    exp = re.compile("perfil_eleitorado_([A-Za-z0-9]{4,}).([a-z]{3})")
-    anos = anos or ['ATUAL']+list(range(2018, 2012, -2))
-    try:
-        for ano in anos:
-            save = os.path.join(folder, 'PerfilZona_{}.csv'.format(ano))
-            if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
-                print('[{}] Downloading demografia_zona-{}'.format(get_time_now(), ano))
-                download = clsA.download(ano)
-                print('[{}] Downloaded.'.format(get_time_now()))
-                try:
-                    files = {
-                        x: clsB.parse(y, ano, nivel='zona')
-                        for x, y in download.items()
-                        if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
-                    }
-                    print('[{}] Parsed.'.format(get_time_now()))
-                except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-                    print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
-                    files = {}
-                for name, df in files.items():
-                    # basename = os.path.basename(name)
-                    # ano, extensao = exp.match(basename).groups()
-                    df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
-                    print('[{}] Saved {}'.format(get_time_now(), save))
-            else:
-                # print('[{}] Found: {}'.format(get_time_now(), save))
-                pass
-    except KeyboardInterrupt:
-        pass
-
-
-def download_demografia_secao(anos=None, estados=None, force=False):
-    clsA = TSE_download_demografia_secao()
-    clsB = TSE_parse_demografia()
-    folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
-    exp = re.compile("perfil_eleitor_secao_([0-9A-Za-z]{4,})_([A-Z]{2}).([a-z]{3})")
-    anos = anos or ['ATUAL']+list(range(2018, 2012, -2))
-    estados = estados or ESTADOS_TODOS
-    try:
-        for ano in anos:
-            for estado in estados:
-                save = os.path.join(folder, 'PerfilSecao_{}_{}.csv'.format(ano, estado))
-                if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
-                    print('[{}] Downloading demografia_secao-{}-{}'.format(get_time_now(), ano, estado))
-                    download = clsA.download(ano, estado)
-                    print('[{}] Downloaded.'.format(get_time_now()))
-                    try:
-                        files = {
-                            x: clsB.parse(y, ano, nivel='secao')
-                            for x, y in download.items()
-                            if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
-                        }
-                        print('[{}] Parsed.'.format(get_time_now()))
-                    except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-                        print('[{}] PROBLEMA: {}-{}'.format(get_time_now(), ano, estado))
-                        files = {}
-                    for name, df in files.items():
-                        # basename = os.path.basename(name)
-                        # ano_s, uf, extensao = exp.match(basename).groups()
-                        df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
-                        print('[{}] Saved {}'.format(get_time_now(), save))
-                else:
-                    # print('[{}] Found: {}'.format(get_time_now(), save))
-                    pass
-    except KeyboardInterrupt:
-        pass
-
-def download_candidatos(anos=None, force=False):
-    clsA = TSE_download_candidatos()
-    clsB = TSE_parse_candidatos()
-    folder = os.path.expanduser('~/localdatalake/tse_refined/candidatos')
-    exp = re.compile("consulta_cand_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
-    anos = anos or list(range(2018, 2012, -2))
-    try:
-        for ano in anos:
-            print('[{}] Downloading candidatos-{}'.format(get_time_now(), ano))
-            download = clsA.download(ano)
-            print('[{}] Downloaded.'.format(get_time_now()))
-            try:
-                files = {
-                    x: clsB.parse(y, ano, nivel='secao')
-                    for x, y in download.items()
-                    if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
-                }
-                print('[{}] Parsed.'.format(get_time_now()))
-            except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-                print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
-                files = {}
-            for name, df in files.items():
-                basename = os.path.basename(name)
-                ano_s, uf, extensao = exp.match(basename).groups()
-                save = os.path.join(folder, 'Candidatos_{}_{}.csv'.format(ano_s, uf))
-                if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
-                    df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
-                    print('[{}] Saved {}'.format(get_time_now(), save))
-    except KeyboardInterrupt:
-        pass
-
-def download_votacao_zona(anos=None, force=False):
-    clsA = TSE_download_votacao_candidato_zona()
-    clsB = TSE_parse_votacao_candidato_zona()
+    anos = Main.anos
+    estados = Main.estados
     folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
-    exp = re.compile("votacao_candidato_munzona_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
-    anos = anos or list(range(2018, 2012, -2))
-    try:
-        for ano in anos:
-            print('[{}] Downloading votos_zona-{}'.format(get_time_now(), ano))
-            download = clsA.download(ano)
-            print('[{}] Downloaded.'.format(get_time_now()))
-            try:
-                files = {
-                    x: clsB.parse(y, ano)
-                    for x, y in download.items()
-                    if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
-                }
-                print('[{}] Parsed.'.format(get_time_now()))
-            except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-                print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
-                files = {}
-            for name, df in files.items():
-                basename = os.path.basename(name)
-                ano_s, uf, extensao = exp.match(basename).groups()
-                save = os.path.join(folder, 'VotoZona_{}_{}.csv'.format(ano_s, uf))
-                if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
-                    df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
-                    print('[{}] Saved {}'.format(get_time_now(), save))
-    except KeyboardInterrupt:
-        pass
+    save_name = 'VotoSecao_{ano}_{estado}.csv'
+    class_downloader = TSE_download_votacao_secao
+    class_parser = TSE_parse_votacao_candidato
+    regular_expression = re.compile("votacao_secao_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+    parser_kwargs = dict(nivel='secao')
 
-def download_votacao_secao(anos=None, estados=None, force=False):
-    clsA = TSE_download_votacao_secao()
-    clsB = TSE_parse_votacao_candidato()
-    folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
-    exp = re.compile("votacao_secao_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
-    anos = anos or list(range(2018, 2012, -2))
-    estados = estados or ESTADOS_TODOS + ['BR']
-    try:
-        for ano in anos:
-            for estado in estados:
-                save = os.path.join(folder, 'VotoSecao_{}_{}.csv'.format(ano, estado))
-                if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
-                    print('[{}] Downloading votacao_secao-{}-{}'.format(get_time_now(), ano, estado))
-                    download = clsA.download(ano, estado)
-                    print('[{}] Downloaded.'.format(get_time_now()))
-                    try:
-                        files = {
-                            x: clsB.parse(y, ano, nivel='secao')
-                            for x, y in download.items()
-                            if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
-                        }
-                        print('[{}] Parsed.'.format(get_time_now()))
-                    except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-                        print('[{}] PROBLEMA: {}-{}'.format(get_time_now(), ano, estado))
-                        files = {}
-                    for name, df in files.items():
-                        # basename = os.path.basename(name)
-                        # ano, uf, extensao = exp.match(basename).groups()
-                        df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
-                        print('[{}] Saved {}'.format(get_time_now(), save))
-                else:
-                    # print('[{}] Found: {}'.format(get_time_now(), save))
-                    pass
-    except KeyboardInterrupt:
-        pass
+class Main_votacao_detalhesecao(Main):
 
-def download_votacao_detalhesecao(anos=None, force=False):
-    clsA = TSE_download_votacao_detalhesecao()
-    clsB = TSE_parse_votacao_detalhe()
+    anos = Main.anos
+    estados = [None]
     folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
-    exp = re.compile("detalhe_votacao_secao_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
-    anos = anos or list(range(2018, 2012, -2))
-    try:
-        for ano in anos:
-            print('[{}] Downloading votacao_detalhesecao-{}'.format(get_time_now(), ano))
-            download = clsA.download(ano)
-            print('[{}] Downloaded.'.format(get_time_now()))
-            try:
-                files = {
-                    x: clsB.parse(y, ano, nivel='secao')
-                    for x, y in download.items()
-                    if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
-                }
-                print('[{}] Parsed.'.format(get_time_now()))
-            except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
-                print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
-                files = {}
-            for name, df in files.items():
-                basename = os.path.basename(name)
-                ano_s, uf, extensao = exp.match(basename).groups()
-                save = os.path.join(folder, 'VotoSecaoDetalhe_{}_{}.csv'.format(ano_s, uf))
-                if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
-                    df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
-                    print('[{}] Saved {}'.format(get_time_now(), save))
-    except KeyboardInterrupt:
-        pass
+    save_name = 'VotoSecaoDetalhe_{ano}_{estado}.csv'
+    class_downloader = TSE_download_votacao_detalhesecao
+    class_parser = TSE_parse_votacao_detalhe
+    regular_expression = re.compile("detalhe_votacao_secao_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+    parser_kwargs = dict(nivel='secao')
+
+# def download_demografia_zona(anos=None, estados=None, force=False, save=False):
+#     clsA = TSE_download_demografia_zona()
+#     clsB = TSE_parse_demografia()
+#     folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
+#     exp = re.compile("perfil_eleitorado_([A-Za-z0-9]{4,}).([a-z]{3})")
+#     anos = anos or ['ATUAL']+list(range(2018, 2012, -2))
+#     try:
+#         for ano in anos:
+#             save = os.path.join(folder, 'PerfilZona_{}.csv'.format(ano))
+#             if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
+#                 print('[{}] Downloading demografia_zona-{}'.format(get_time_now(), ano))
+#                 download = clsA.download(ano)
+#                 print('[{}] Downloaded.'.format(get_time_now()))
+#                 try:
+#                     files = {
+#                         x: clsB.parse(y, ano, nivel='zona')
+#                         for x, y in download.items()
+#                         if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
+#                     }
+#                     print('[{}] Parsed.'.format(get_time_now()))
+#                 except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+#                     print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
+#                     files = {}
+#                 for name, df in files.items():
+#                     # basename = os.path.basename(name)
+#                     # ano, extensao = exp.match(basename).groups()
+#                     df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
+#                     print('[{}] Saved {}'.format(get_time_now(), save))
+#             else:
+#                 # print('[{}] Found: {}'.format(get_time_now(), save))
+#                 pass
+#     except KeyboardInterrupt:
+#         pass
+
+
+# def download_demografia_secao(anos=None, estados=None, force=False):
+#     clsA = TSE_download_demografia_secao()
+#     clsB = TSE_parse_demografia()
+#     folder = os.path.expanduser('~/localdatalake/tse_refined/perfil')
+#     exp = re.compile("perfil_eleitor_secao_([0-9A-Za-z]{4,})_([A-Z]{2}).([a-z]{3})")
+#     anos = anos or ['ATUAL']+list(range(2018, 2012, -2))
+#     estados = estados or ESTADOS_TODOS
+#     try:
+#         for ano in anos:
+#             for estado in estados:
+#                 save = os.path.join(folder, 'PerfilSecao_{}_{}.csv'.format(ano, estado))
+#                 if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
+#                     print('[{}] Downloading demografia_secao-{}-{}'.format(get_time_now(), ano, estado))
+#                     download = clsA.download(ano, estado)
+#                     print('[{}] Downloaded.'.format(get_time_now()))
+#                     try:
+#                         files = {
+#                             x: clsB.parse(y, ano, nivel='secao')
+#                             for x, y in download.items()
+#                             if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
+#                         }
+#                         print('[{}] Parsed.'.format(get_time_now()))
+#                     except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+#                         print('[{}] PROBLEMA: {}-{}'.format(get_time_now(), ano, estado))
+#                         files = {}
+#                     for name, df in files.items():
+#                         # basename = os.path.basename(name)
+#                         # ano_s, uf, extensao = exp.match(basename).groups()
+#                         df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
+#                         print('[{}] Saved {}'.format(get_time_now(), save))
+#                 else:
+#                     # print('[{}] Found: {}'.format(get_time_now(), save))
+#                     pass
+#     except KeyboardInterrupt:
+#         pass
+
+# def download_candidatos(anos=None, force=False):
+#     clsA = TSE_download_candidatos()
+#     clsB = TSE_parse_candidatos()
+#     folder = os.path.expanduser('~/localdatalake/tse_refined/candidatos')
+#     exp = re.compile("consulta_cand_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+#     anos = anos or list(range(2018, 2012, -2))
+#     try:
+#         for ano in anos:
+#             print('[{}] Downloading candidatos-{}'.format(get_time_now(), ano))
+#             download = clsA.download(ano)
+#             print('[{}] Downloaded.'.format(get_time_now()))
+#             try:
+#                 files = {
+#                     x: clsB.parse(y, ano, nivel='secao')
+#                     for x, y in download.items()
+#                     if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
+#                 }
+#                 print('[{}] Parsed.'.format(get_time_now()))
+#             except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+#                 print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
+#                 files = {}
+#             for name, df in files.items():
+#                 basename = os.path.basename(name)
+#                 ano_s, uf, extensao = exp.match(basename).groups()
+#                 save = os.path.join(folder, 'Candidatos_{}_{}.csv'.format(ano_s, uf))
+#                 if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
+#                     df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
+#                     print('[{}] Saved {}'.format(get_time_now(), save))
+#     except KeyboardInterrupt:
+#         pass
+
+# def download_votacao_zona(anos=None, force=False):
+#     clsA = TSE_download_votacao_candidato_zona()
+#     clsB = TSE_parse_votacao_candidato_zona()
+#     folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
+#     exp = re.compile("votacao_candidato_munzona_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+#     anos = anos or list(range(2018, 2012, -2))
+#     try:
+#         for ano in anos:
+#             print('[{}] Downloading votos_zona-{}'.format(get_time_now(), ano))
+#             download = clsA.download(ano)
+#             print('[{}] Downloaded.'.format(get_time_now()))
+#             try:
+#                 files = {
+#                     x: clsB.parse(y, ano)
+#                     for x, y in download.items()
+#                     if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
+#                 }
+#                 print('[{}] Parsed.'.format(get_time_now()))
+#             except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+#                 print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
+#                 files = {}
+#             for name, df in files.items():
+#                 basename = os.path.basename(name)
+#                 ano_s, uf, extensao = exp.match(basename).groups()
+#                 save = os.path.join(folder, 'VotoZona_{}_{}.csv'.format(ano_s, uf))
+#                 if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
+#                     df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
+#                     print('[{}] Saved {}'.format(get_time_now(), save))
+#     except KeyboardInterrupt:
+#         pass
+
+# def download_votacao_secao(anos=None, estados=None, force=False):
+#     clsA = TSE_download_votacao_secao()
+#     clsB = TSE_parse_votacao_candidato()
+#     folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
+#     exp = re.compile("votacao_secao_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+#     anos = anos or list(range(2018, 2012, -2))
+#     estados = estados or ESTADOS_TODOS + ['BR']
+#     try:
+#         for ano in anos:
+#             for estado in estados:
+#                 save = os.path.join(folder, 'VotoSecao_{}_{}.csv'.format(ano, estado))
+#                 if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
+#                     print('[{}] Downloading votacao_secao-{}-{}'.format(get_time_now(), ano, estado))
+#                     download = clsA.download(ano, estado)
+#                     print('[{}] Downloaded.'.format(get_time_now()))
+#                     try:
+#                         files = {
+#                             x: clsB.parse(y, ano, nivel='secao')
+#                             for x, y in download.items()
+#                             if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
+#                         }
+#                         print('[{}] Parsed.'.format(get_time_now()))
+#                     except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+#                         print('[{}] PROBLEMA: {}-{}'.format(get_time_now(), ano, estado))
+#                         files = {}
+#                     for name, df in files.items():
+#                         # basename = os.path.basename(name)
+#                         # ano, uf, extensao = exp.match(basename).groups()
+#                         df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
+#                         print('[{}] Saved {}'.format(get_time_now(), save))
+#                 else:
+#                     # print('[{}] Found: {}'.format(get_time_now(), save))
+#                     pass
+#     except KeyboardInterrupt:
+#         pass
+
+# def download_votacao_detalhesecao(anos=None, force=False):
+#     clsA = TSE_download_votacao_detalhesecao()
+#     clsB = TSE_parse_votacao_detalhe()
+#     folder = os.path.expanduser('~/localdatalake/tse_refined/votos')
+#     exp = re.compile("detalhe_votacao_secao_([0-9]{4})_([A-Z]{2}).([a-z]{3})")
+#     anos = anos or list(range(2018, 2012, -2))
+#     try:
+#         for ano in anos:
+#             print('[{}] Downloading votacao_detalhesecao-{}'.format(get_time_now(), ano))
+#             download = clsA.download(ano)
+#             print('[{}] Downloaded.'.format(get_time_now()))
+#             try:
+#                 files = {
+#                     x: clsB.parse(y, ano, nivel='secao')
+#                     for x, y in download.items()
+#                     if (x.endswith('txt') or x.endswith('csv')) and ('brasil' not in x.lower())
+#                 }
+#                 print('[{}] Parsed.'.format(get_time_now()))
+#             except (MemoryError, AttributeError, pandas.errors.EmptyDataError):
+#                 print('[{}] PROBLEMA: {}'.format(get_time_now(), ano))
+#                 files = {}
+#             for name, df in files.items():
+#                 basename = os.path.basename(name)
+#                 ano_s, uf, extensao = exp.match(basename).groups()
+#                 save = os.path.join(folder, 'VotoSecaoDetalhe_{}_{}.csv'.format(ano_s, uf))
+#                 if force or not (os.path.exists(save) or os.path.exists(save+'.gz')):
+#                     df.to_csv(save, index=False, header=True, sep=';', float_format='%.0f')
+#                     print('[{}] Saved {}'.format(get_time_now(), save))
+#     except KeyboardInterrupt:
+#         pass
 
 def get_time_now():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -1226,17 +1272,18 @@ if __name__ == '__main__':
     else:
         anos = None
     force = parsed.force
-    save = parsed.download
+    save_raw = parsed.download
 
+    kwargs = dict(force=force, save_raw=save_raw)
     if parsed.qual in ['candidatos', 'tudo']:
-        download_candidatos(anos=anos, force=force)
+        Main_candidatos.main_loop(anos=anos, **kwargs)
     if parsed.qual in ['demografia_zona', 'demografia', 'tudo']:
-        download_demografia_zona(anos=anos, force=force)
+        Main_demografia_zona.main_loop(anos=anos, **kwargs)
     if parsed.qual in ['demografia_secao', 'demografia', 'tudo']:
-        download_demografia_secao(anos=anos, force=force)
+        Main_demografia_secao.main_loop(anos=anos, **kwargs)
     if parsed.qual in ['votos', 'votos_secao', 'tudo']:
-        download_votacao_secao(anos=anos, force=force)
-    if parsed.qual in ['votos', 'votos_secao', 'tudo']:
-        download_votacao_detalhesecao(anos=anos, force=force)
+        Main_votacao_secao.main_loop(anos=anos, **kwargs)
+    if parsed.qual in ['votos', 'votos_secao', 'votos_detalhe', 'tudo']:
+        Main_votacao_detalhesecao.main_loop(anos=anos, **kwargs)
     if parsed.qual in ['votos', 'votos_zona', 'tudo']:
-        download_votacao_zona(anos=anos, force=force)
+        Main_votacao_candidato_zona.main_loop(anos=anos, **kwargs)
