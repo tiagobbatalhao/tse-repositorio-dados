@@ -1055,7 +1055,7 @@ def get_time_now():
 if __name__ == '__main__':
 
     arguments = argparse.ArgumentParser()
-    arguments.add_argument('--qual')
+    arguments.add_argument('--dados')
     arguments.add_argument('--anos', default=None)
     arguments.add_argument('--force', action='store_true')
     arguments.add_argument('--download', action='store_true')
@@ -1075,15 +1075,15 @@ if __name__ == '__main__':
     save_raw = parsed.download
 
     kwargs = dict(force=force, save_raw=save_raw)
-    if parsed.qual in ['candidatos', 'tudo']:
+    if parsed.dados in ['candidatos', 'tudo']:
         Main_candidatos.main_loop(anos=anos, **kwargs)
-    if parsed.qual in ['demografia_zona', 'demografia', 'tudo']:
+    if parsed.dados in ['demografia_zona', 'demografia', 'tudo']:
         Main_demografia_zona.main_loop(anos=anos, **kwargs)
-    if parsed.qual in ['demografia_secao', 'demografia', 'tudo']:
+    if parsed.dados in ['demografia_secao', 'demografia', 'tudo']:
         Main_demografia_secao.main_loop(anos=anos, **kwargs)
-    if parsed.qual in ['votos', 'votos_secao', 'tudo']:
+    if parsed.dados in ['votos', 'votos_secao', 'tudo']:
         Main_votacao_secao.main_loop(anos=anos, **kwargs)
-    if parsed.qual in ['votos', 'votos_secao', 'votos_detalhe', 'tudo']:
+    if parsed.dados in ['votos', 'votos_secao', 'votos_detalhe', 'tudo']:
         Main_votacao_detalhesecao.main_loop(anos=anos, **kwargs)
-    if parsed.qual in ['votos', 'votos_zona', 'tudo']:
+    if parsed.dados in ['votos', 'votos_zona', 'tudo']:
         Main_votacao_candidato_zona.main_loop(anos=anos, **kwargs)
